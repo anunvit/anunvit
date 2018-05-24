@@ -1,0 +1,69 @@
+version: '3'
+
+networks:
+  default:
+    external:
+      name: ugw-network
+      
+services:
+  file-loader:
+    image: tsm-registry-01.true.th:5000/mse/ugw/arc-file-loader:1.0.3
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 1024M
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 30s
+      update_config:
+        failure_action: rollback
+        parallelism: 1
+        delay: 10s
+        monitor: 15s
+    environment:
+      SPRING_APPLICATION_INDEX: "{{.Task.Slot}}"
+      ELF_KAFKA_HOSTS: 10.95.108.214:9092
+      DATA_CASSANDRA_KEYSPACE_NAME: ugw
+      DATA_CASSANDRA_CONTACT_POINTS: 10.95.108.226,10.95.108.227,10.95.108.228
+      DATA_CASSANDRA_PORT: 9042
+      #DATA_REDIS_CLUSTER_ENABLED: true
+      DATA_REDIS_CLUSTER_NODES: 10.95.108.209:7001,10.95.108.209:7002,10.95.108.209:7003,10.95.108.210:7001,10.95.108.210:7002,10.95.108.210:7003
+      DATA_REDIS_HOST: 10.95.108.214
+      DATA_REDIS_PORT: 6379
+      DATA_REDIS_PASSWORD: eit*132
+      LOGSTASH_SERVER: 10.95.108.188:4560
+      ARC_FILE_LOADER_GROUP: arc
+      #ARC_FILE_LOADER_QUOTA_KEY: ugw:quota:
+      #ARC_FILE_LOADER_QUOTA_PREFIX: quota-
+      #ARC_FILE_LOADER_BATCH_KEY: ugw:batch:
+      #ARC_FILE_LOADER_BATCH_COUNT_PREFIX: count-add-q-
+      #ARC_FILE_LOADER_BATCH_GEN_REPORT_PREFIX: gen-report-
+      #ARC_FILE_LOADER_SMS_NOTIFY_MESSAGE: acc={acc}\nstatus={status}\nfile_name={file_name}\nfile_size={file_size}\ntotal_success_record={total_success_record}\ntotal_fail_record={total_fail_record}
+      ARC_FILE_LOADER_SMS_NOTIFY_MSISDN: 66801234567,66801234568
+      ARC_FILE_LOADER_SMS_NOTIFY_SENDER_NAME: TruemoveH
+      ARC_FILE_LOADER_KAFKA_MAIN_HOSTS: 10.95.108.206:9092
+      #ARC_FILE_LOADER_KAFKA_MAIN_TOPICS_CREATE: ${infra.service_name}-updatedb
+      #ARC_FILE_LOADER_KAFKA_MAIN_TOPICS_NOTIFY_PREFIX:${infra.service_name}-notify-
+      #ARC_FILE_LOADER_KAFKA_MAIN_TOPICS_SMS_NOTIFY:${infra.service_name}-common-notify
+      ARC_FILE_LOADER_ZOOKEEPER_SERVER: 10.95.108.206:2181
+      RUN_ARGS: ''
+      JAVA_OPTS: '-server -Xss512k -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -XshowSettings:vm'
+      TZ: Asia/Bangkok
+    volumes:
+     - type: volume
+       source: arc-path
+       target: /var/lib/arc
+       
+volumes:
+   arc-path:
+      driver: local
+      driver_opts:
+        type: nfs
+        o: addr=10.95.108.232,vers=4.1,rw
+        device: ":/data/ARC/OUTBOX"
